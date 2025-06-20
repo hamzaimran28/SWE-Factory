@@ -48,3 +48,6 @@ disable_memory_pool: bool = False
 disable_context_retrieval: bool = False
 
 disable_run_test: bool = False
+
+setup_dir: str = ""
+organize_output_only: bool = False

@@ -97,10 +97,9 @@ def main(args, subparser_dest_attr_name: str = "command"):
     #FIXME  we will remove these hyperparamters, which are from AutoCodeRover, thanks to this work.
 
     globals.context_generation_limit = args.output_fix_limit
-    globals.setup_dir = args.setup_dir 
-    
-    globals.organize_output_only = args.organize_output_only
-    globals.results_path = args.results_path 
+    globals.setup_dir = args.setup_dir if args.setup_dir is not None else ''
+    globals.organize_output_only = getattr(args, 'organize_output_only', False)
+    globals.results_path = args.results_path if args.results_path is not None else ''
     globals.disable_memory_pool = args.disable_memory_pool
     globals.disable_run_test = args.disable_run_test
     
@@ -116,7 +115,7 @@ def main(args, subparser_dest_attr_name: str = "command"):
             client = None
             # try:
             tasks = make_swe_tasks(
-                args.task, args.task_list_file,args.tasks_map, args.setup_dir,client
+                args.task, args.task_list_file, args.tasks_map, args.setup_dir, client  # type: ignore
             )
        
             groups = group_swe_tasks_by_env(tasks)
@@ -494,7 +493,7 @@ def run_task_groups(
     # single process mode
     if num_processes == 1:
         log.print_with_time("Running in single process mode.")
-        run_tasks_serial(all_tasks)
+        run_tasks_serial(all_tasks, args.model)
         log.print_with_time("Finished all tasks sequentially.")
     else:
         
@@ -512,9 +511,9 @@ def run_task_groups(
         log.print_with_time(f"SWE-Bench input file created: {swe_input_file}")
 
 
-def run_tasks_serial(tasks: list[RawTask]) -> None:
+def run_tasks_serial(tasks: list[RawTask], model_name: str) -> None:
     for task in tasks:
-        run_task_in_subprocess(task)
+        run_task_in_subprocess(task, model_name)
 
 
 def run_task_groups_parallel(
@@ -564,11 +563,11 @@ def _safe_run_group(gid: str, tasks: Sequence[RawTask]) -> None:
     Any exception is re-raised with the group ID for clearer logging.
     """
     try:
-        run_task_group(gid, tasks)
+        run_task_group(gid, list(tasks), args.model)  # Cast to list for type safety
     except Exception as e:
         raise RuntimeError(f"Group {gid} execution failed: {e!r}")
 
-def run_task_group(task_group_id: str, task_group_items: list[RawTask]) -> None:
+def run_task_group(task_group_id: str, task_group_items: list[RawTask], model_name: str) -> None:
     """
     Run all tasks in a task group sequentially.
     Main entry to parallel processing.
@@ -577,10 +576,8 @@ def run_task_group(task_group_id: str, task_group_items: list[RawTask]) -> None:
         f"Starting process for task group {task_group_id}. Number of tasks: {len(task_group_items)}."
     )
     for task in task_group_items:
-        # within a group, the runs are always sequential
-        run_task_in_subprocess(task)
+        run_task_in_subprocess(task, model_name)
         log.print_with_time(globals_mut.incre_task_return_msg())
-
     log.print_with_time(
         f"{globals_mut.incre_task_group_return_msg()} Finished task group {task_group_id}."
     )
@@ -608,11 +605,11 @@ def run_task_group(task_group_id: str, task_group_items: list[RawTask]) -> None:
 
 
 
-def run_task_in_subprocess(task: RawTask, timeout_seconds: int = 5400) -> None:
+def run_task_in_subprocess(task: RawTask, model_name: str, timeout_seconds: int = 5400) -> None:
     """
     Run a task in a subprocess, with hard timeout control.
     """
-    p = multiprocessing.Process(target=run_raw_task, args=(task,))
+    p = multiprocessing.Process(target=run_raw_task, args=(task, model_name))
     p.start()
     p.join(timeout=timeout_seconds)
     if p.is_alive():
@@ -621,29 +618,29 @@ def run_task_in_subprocess(task: RawTask, timeout_seconds: int = 5400) -> None:
         p.join()
 
 def run_raw_task(
-    task: RawTask, print_callback: Callable[[dict], None] | None = None
+    task: RawTask, model_name: str, print_callback: Callable[[dict], None] | None = None
 ) -> bool:
     """
     High-level entry for running one task.
-
     Args:
         - task: The Task instance to run.
-
+        - model_name: The name of the model to use.
     Returns:
         Whether the task completed successfully.
     """
-    task_id = task.task_id
+    from app.model.register import register_all_models
+    register_all_models()
+    from app.model import common
+    common.set_model(model_name)
 
+    task_id = task.task_id
     start_time_s = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    # task_output_dir = pjoin(globals.output_dir, f"{task_id}_{start_time_s}")
     task_output_dir = pjoin(globals.output_dir, f"{task_id}")
-    
     status_file = pjoin(task_output_dir, "status.json")
     if os.path.exists(status_file):
         log.log_and_always_print(f"Status file already exists for task {task_id}, skipping execution")
         return True
     elif os.path.exists(task_output_dir):
-        # If directory exists but no status.json, clean it up
         try:
             shutil.rmtree(task_output_dir)
             log.log_and_always_print(f"Cleared existing task directory {task_output_dir} as it had no status.json")
@@ -652,14 +649,10 @@ def run_raw_task(
             return False
     apputils.create_dir_if_not_exists(task_output_dir)
     task.dump_meta_data(task_output_dir)
-
     log.log_and_always_print(f"============= Running task {task_id} =============")
-
     run_ok = False
-
     try:
         run_ok = do_inference(task.to_task(), task_output_dir, print_callback)
-
         if run_ok:
             run_status_message = f"Task {task_id} completed successfully."
         else:
@@ -667,9 +660,7 @@ def run_raw_task(
     except Exception as e:
         logger.exception(e)
         run_status_message = f"Task {task_id} failed with exception: {e}."
-
     log.log_and_always_print(run_status_message)
-
     return run_ok
 
 
@@ -681,8 +672,9 @@ def do_inference(
     client = docker.from_env()
     apputils.create_dir_if_not_exists(task_output_dir)
     # github_link = f'https://github.com/{python_task.repo_name}.git'
-    commit_hash = python_task.commit
-    apputils.clone_repo_and_checkout(python_task.repo_cache_path,commit_hash,python_task.project_path)
+    commit_hash = getattr(python_task, 'commit', '')
+    repo_cache_path = getattr(python_task, 'repo_cache_path', '')
+    apputils.clone_repo_and_checkout(repo_cache_path, commit_hash, python_task.project_path)
     logger.add(
         pjoin(task_output_dir, "info.log"),
         level="DEBUG",
@@ -701,7 +693,7 @@ def do_inference(
                                         client,
                                         start_time,
                                         globals.conv_round_limit,
-                                        globals.results_path,
+                                        globals.results_path if globals.results_path is not None else '',
                                         disable_memory_pool = globals.disable_memory_pool,
                                         disable_context_retrieval= globals.disable_context_retrieval,
                                         disable_run_test= globals.disable_run_test
@@ -713,7 +705,7 @@ def do_inference(
         dump_cost(start_time, end_time, task_output_dir, python_task.project_path)
     finally:
         # python_task.reset_project()
-        python_task.remove_project()
+        python_task.remove_project()  # type: ignore
         if client:
             client.close()
 

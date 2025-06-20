@@ -1,0 +1,42 @@
+[
+  {
+    "name": "tensorflow/tensorflow",
+    "stars": 190392,
+    "url": "https://github.com/tensorflow/tensorflow",
+    "description": "An Open Source Machine Learning Framework for Everyone",
+    "owner": "tensorflow",
+    "language": "C++"
+  },
+  {
+    "name": "facebook/react-native",
+    "stars": 122695,
+    "url": "https://github.com/facebook/react-native",
+    "description": "A framework for building native applications using React",
+    "owner": "facebook",
+    "language": "C++"
+  },
+  {
+    "name": "electron/electron",
+    "stars": 117165,
+    "url": "https://github.com/electron/electron",
+    "description": ":electron: Build cross-platform desktop apps with JavaScript, HTML, and CSS",
+    "owner": "electron",
+    "language": "C++"
+  },
+  {
+    "name": "microsoft/terminal",
+    "stars": 98632,
+    "url": "https://github.com/microsoft/terminal",
+    "description": "The new Windows Terminal and the original Windows console host, all in the same place!",
+    "owner": "microsoft",
+    "language": "C++"
+  },
+  {
+    "name": "godotengine/godot",
+    "stars": 98130,
+    "url": "https://github.com/godotengine/godot",
+    "description": "Godot Engine – Multi-platform 2D and 3D game engine",
+    "owner": "godotengine",
+    "language": "C++"
+  }
+]

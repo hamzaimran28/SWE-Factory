@@ -186,11 +186,7 @@ def get_all_model_names():
     return list(MODEL_HUB.keys())
 
 
-class SelectedModel:
-    def __init__(self, name):
-        self.name = name
-
-SELECTED_MODEL = SelectedModel("gpt-4.1-mini")
+SELECTED_MODEL = None  # Will be set by set_model
 
 
 def set_model(model_name: str):

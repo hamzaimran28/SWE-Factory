@@ -1,0 +1,42 @@
+[
+  {
+    "name": "EbookFoundation/free-programming-books",
+    "stars": 359574,
+    "url": "https://github.com/EbookFoundation/free-programming-books",
+    "description": ":books: Freely available programming books",
+    "owner": "EbookFoundation",
+    "language": "Python"
+  },
+  {
+    "name": "public-apis/public-apis",
+    "stars": 351697,
+    "url": "https://github.com/public-apis/public-apis",
+    "description": "A collective list of free APIs",
+    "owner": "public-apis",
+    "language": "Python"
+  },
+  {
+    "name": "donnemartin/system-design-primer",
+    "stars": 306576,
+    "url": "https://github.com/donnemartin/system-design-primer",
+    "description": "Learn how to design large-scale systems. Prep for the system design interview.  Includes Anki flashcards.",
+    "owner": "donnemartin",
+    "language": "Python"
+  },
+  {
+    "name": "vinta/awesome-python",
+    "stars": 246940,
+    "url": "https://github.com/vinta/awesome-python",
+    "description": "An opinionated list of awesome Python frameworks, libraries, software and resources.",
+    "owner": "vinta",
+    "language": "Python"
+  },
+  {
+    "name": "TheAlgorithms/Python",
+    "stars": 201459,
+    "url": "https://github.com/TheAlgorithms/Python",
+    "description": "All Algorithms implemented in Python",
+    "owner": "TheAlgorithms",
+    "language": "Python"
+  }
+]
